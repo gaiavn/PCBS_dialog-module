@@ -1,0 +1,50 @@
+VARIABLES_DICT = {'player': 'Hazel', 'money': 10, 'friend': None}
+
+#1
+##NAME(Aki)
+Hello, {player}!
+
+##NAME(VAL(player))
+Hi Aki.
+
+##NEXTCOND(ASSERT(VAL(money) > 0), 2, 3)
+
+
+#2
+##NAME()
+You are not rich enough to be friend with him.
+
+##NEXT(5)
+
+
+#3
+##NAME(Aki)
+Let's be friends!
+
+##CHOICE
+Ok
+Ugh, no...
+
+##NEXTCHOICE(4, 5)
+
+
+#4
+##NAME()
+Congrats, you are now friends!
+
+##ASSIGNVAL(friend, 'Aki')
+
+##ADDVAL(money, 1)
+
+##NEXT(5)
+
+
+#5
+
+#NAME()
+Your friend: {friend}
+Your money: {money}
+
+##END
+
+
