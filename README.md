@@ -7,5 +7,3 @@ A box is a portion of text that is displayed at the same time on the screen. A s
 
 Each possible cell of the dialog are stored in a single dictionary, which takes their id as a key. There is also a dictionary for the variables that can be modified during the dialog and displayed.
 The text file that is used for creating the dialog dictionary will follow a syntax as close as possible to the structure of the object classes used in the code.
-TEST
-
