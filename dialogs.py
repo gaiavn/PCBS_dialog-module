@@ -146,6 +146,14 @@ class CurrentState:
 
 '''________FUNCTIONS:_INTERPRETATION PART___________________________________'''
                     
+def remove_noise(str_list):
+    new_list = list(str_list)
+    for string in str_list:
+        if string == '' or string == '\n' or string == ' \n' or string == ' ':
+            new_list.remove(string)
+    return new_list
+
+
 def file_to_dict(pathname):
     file = open(pathname, 'r')
     text = file.read()
@@ -161,19 +169,36 @@ def create_dict_from_list(L):
     return D
 
 def text_to_cells(text):
-    text_cells = re.split('\#\d+', text).remove('')
+    text_cells = remove_noise(re.split('\#\d+', text))
     cells = []
     for el in text_cells:
-        cells += Cell(text_to_boxes(el), text_to_next(el))
+        cells += [Cell(text_to_boxes(el), text_to_next(el))]
     return cells
 
-def text_to_boxes(text_cell):
-    text_boxes = re.split('(?:\#\#SIMPLEBOX|\#\#CHOICEBOX)', text_cell)
-    return text_boxes
+def text_to_boxes(str_cell):
+    clean_str = re.sub('\#\#NEXT\w*(\(.+\))*', '', str_cell) #remove the "next" part        
+    list_of_box_type_str = remove_noise(re.split('\#\#', clean_str)) #list of boxes
+    print(list_of_box_type_str)
+    for string in list_of_box_type_str:
+        lines = remove_noise(re.split('\n', string))
+        print(lines)
+        if re.search('NAME\(', string):
+            name = re.match('NAME\((.*)\)', lines[0]).group() #!
+            lines.remove(lines[0])
+            str_and_name_to_boxes_list(name, lines)
+        elif re.search('CHOICE', str_cell):
+            return ChoiceBox(lines[1], lines[2])
+        else:
+            raise ValueError("Unidentified box types in the cell: " + string)
+
+def str_and_name_to_boxes_list(name, str_lines):
+    # for simplebox only
+    return [SimpleBox(name, ['Everything', 'is']), SimpleBox(name, ['fine'])]
+    
 
 def text_to_next(text_cell):
-    if re.search('NEXTSIMPLE', text_cell):
-        return NextSimple(re.search('NEXTSIMPLE\((\d+)\)', text_cell).groups()[0])
+    if re.search('NEXT\(', text_cell):
+        return NextSimple(re.search('NEXT\((\d+)\)', text_cell).groups()[0])
     elif re.search('NEXTEND', text_cell):
         return NextEnd()
     elif re.search('NEXTCOND', text_cell):
@@ -183,6 +208,8 @@ def text_to_next(text_cell):
     elif re.search('NEXTCHOICE', text_cell):
         matched = re.search('NEXTCHOICE\((\d+), (\d+)\)', text_cell).groups()
         return NextChoice(int(matched[0]), int(matched[1]))
+    else:
+        raise ValueError("Next object missing in the cell: " + text_cell)
     
 def strval_to_val(val_str):
         bare_str = re.match('VAL\((.+)\)', val_str.group()).groups()[0]
@@ -288,7 +315,7 @@ left_margin = 20
 clock = pyg.time.Clock()
 end = False
 
-DIALOG_DICT = file_to_dict("test.txt")
+DIALOG_DICT = file_to_dict("simple_proto.txt")
 current_state = CurrentState(DIALOG_DICT, VARIABLES_DICT)
                 
 while not(end):

@@ -1,10 +1,9 @@
-VARIABLES_DICT = {'player': 'Hazel', 'money': 10, 'friend': None}
 
 #1
 ##NAME(Aki)
 Hello, {player}!
 
-##NAME(VAL(player))
+##NAME(player)
 Hi Aki.
 
 ##NEXTCOND(ASSERT(VAL(money) > 0), 2, 3)
