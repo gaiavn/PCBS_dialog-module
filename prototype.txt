@@ -6,7 +6,7 @@ Hello, {player}!
 ##NAME(player)
 Hi Aki.
 
-##NEXTCOND(ASSERT(VAL(money) > 0), 2, 3)
+##NEXTCOND(ASSERT(VAL(money) > 0), 3, 2)
 
 
 #2
@@ -24,16 +24,16 @@ Let's be friends!
 Ok
 Ugh, no...
 
+ASSIGNVALUEFROMCHOICE(friend, 'Aki', 'None')
+
+ADDVALUEFROMCHOICE(money, 1, 0)
+
 ##NEXTCHOICE(4, 5)
 
 
 #4
 ##NAME()
 Congrats, you are now friends!
-
-##ASSIGNVAL(friend, 'Aki')
-
-##ADDVAL(money, 1)
 
 ##NEXT(5)
 

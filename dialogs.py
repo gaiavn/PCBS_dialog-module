@@ -6,6 +6,9 @@ Created on Wed Mar  3 10:19:01 2021
 @author: gaia
 """
 
+'''TO DO: transformer les int en vrai int et enlever les guillemets aux string'''
+
+
 from IPython import get_ipython
 get_ipython().magic('reset -sf')
 # for the font problem, reset variables
@@ -52,7 +55,7 @@ class AddValue(StoreValue):
 class AddValueFromChoice(StoreValue):
     def __init__(self, var_name, val1, val2):
         if not(isinstance(val1, int)) or not(isinstance(val2, int)):
-            raise TypeError("added values must be of integer type")
+            raise TypeError("added values " + val1 + ' and ' + val2 + " must be of integer type")
         else:
             self.var_name = var_name
             self.val1 = val1
@@ -74,7 +77,7 @@ class ChoiceBox(Box):
     def __init__(self, choice1_text, choice2_text, store_value=None):
         self.choice1_text = choice1_text
         self.choice2_text = choice2_text
-        if store_value is None:
+        if store_value == None:
             self.store_value = []
         else:
             self.store_value = store_value
@@ -125,7 +128,9 @@ class CurrentState:
     
     def set_current_cell_index_and_reset_box_index(self, new_index):
         if new_index not in self.dialog_dict:
-            raise IndexError("new index not in the dictionary")
+            if isinstance(new_index, str):
+                print("new index is a str")
+            raise IndexError("new index '"+ new_index + "' not in the dictionary")
         else:
             self.current_cell_index = new_index
             self.current_box_index = 0
@@ -144,7 +149,7 @@ class CurrentState:
     
     
 
-'''________FUNCTIONS:_INTERPRETATION PART___________________________________'''
+'''________FUNCTIONS:_TXT_INTERPRETATION_PART_______________________________'''
                     
 def remove_noise(str_list):
     new_list = list(str_list)
@@ -152,7 +157,6 @@ def remove_noise(str_list):
         if string == '' or string == '\n' or string == ' \n' or string == ' ':
             new_list.remove(string)
     return new_list
-
 
 def file_to_dict(pathname):
     file = open(pathname, 'r')
@@ -177,28 +181,75 @@ def text_to_cells(text):
 
 def text_to_boxes(str_cell):
     clean_str = re.sub('\#\#NEXT\w*(\(.+\))*', '', str_cell) #remove the "next" part        
-    list_of_box_type_str = remove_noise(re.split('\#\#', clean_str)) #list of boxes
-    print(list_of_box_type_str)
+    list_of_box_type_str = remove_noise(re.split('\#\#', clean_str)) #list of str boxes
+    final_boxes = []                                             
     for string in list_of_box_type_str:
         lines = remove_noise(re.split('\n', string))
-        print(lines)
         if re.search('NAME\(', string):
-            name = re.match('NAME\((.*)\)', lines[0]).group() #!
+            name = re.match('NAME\((.*)\)', lines[0]).groups()[0]
             lines.remove(lines[0])
-            str_and_name_to_boxes_list(name, lines)
-        elif re.search('CHOICE', str_cell):
-            return ChoiceBox(lines[1], lines[2])
+            final_boxes.extend(str_and_name_to_boxes_list(name, lines))
+        elif re.search('CHOICE', string):
+            if re.search('ASSIGNVALUE|ADDVALUE', string):
+                print(lines)
+                matched = re.findall('(ASSIGNVALUE[FROMCHOICE]*|ADDVALUE[FROMCHOICE]*)\((.+)\)', string)
+                final_boxes.append(ChoiceBox(lines[1], lines[2], str_to_store_values(matched)))
+            else:
+                final_boxes.append(ChoiceBox(lines[1], lines[2]))
+        elif re.search('ASSIGNVAL', string):
+            matched = re.match('ASSIGNVAL\((.+), (.+)\))').groups()
+            final_boxes.append(AssignValue(matched[0], matched[1]))
+        elif re.search('ADDVAL', string):
+            matched = re.match('ADDVAL\((.+), (.+)\))').groups()
+            final_boxes.append(AddValue(matched[0], matched[1]))
         else:
             raise ValueError("Unidentified box types in the cell: " + string)
+    return final_boxes
 
 def str_and_name_to_boxes_list(name, str_lines):
     # for simplebox only
+    final_lines = []
+    for line in str_lines:
+        if line_length(line) < WINX - 10:
+            final_lines.append(line)
+        else: #line too long
+            final_lines.extend(divide_line(line, WINX - 10))
+    return lines_to_boxes(name, final_lines)
+        
     return [SimpleBox(name, ['Everything', 'is']), SimpleBox(name, ['fine'])]
-    
+
+def line_length(line):
+    return myfont.render(line, False, (0, 0, 0)).get_rect().size[0]
+
+def divide_line(longline, length_max):
+    ''' takes a line, cuts it into sub lines of a smaller length and return them
+    as a list'''
+    final_lines = []
+    words_left = re.split(' ', longline) # words not processed
+    while words_left != []:
+        sub_line = '' # a line of the right length
+        while line_length(sub_line + ' ' + words_left[0]) < length_max and words_left != []:
+            sub_line += ' ' + words_left[0]
+            words_left.remove(words_left[0])
+        final_lines.append(sub_line)
+    return final_lines  
+
+def lines_to_boxes(name, lines):
+    lines_left = list(lines)
+    boxes = []
+    while lines_left != []:
+        if len(lines_left) >= lines_per_box:
+            boxes.append(SimpleBox(name, [lines_left[i] for i in range(lines_per_box)]))
+            for i in range(lines_per_box):
+                lines_left.remove(lines_left[i])
+        else:
+            boxes.append(SimpleBox(name, lines_left))
+            lines_left = []
+    return boxes
 
 def text_to_next(text_cell):
     if re.search('NEXT\(', text_cell):
-        return NextSimple(re.search('NEXT\((\d+)\)', text_cell).groups()[0])
+        return NextSimple(int(re.search('NEXT\((\d+)\)', text_cell).groups()[0]))
     elif re.search('NEXTEND', text_cell):
         return NextEnd()
     elif re.search('NEXTCOND', text_cell):
@@ -217,17 +268,37 @@ def strval_to_val(val_str):
             return str(VARIABLES_DICT[bare_str])
         else:
             raise ValueError(bare_str + " not in the dict")
-    
+            
+def str_to_store_values(list):
+    store_values = []
+    for el in list:
+        matched = re.split(',', el[1])
+        matched[1] = re.sub('VAL\((.+)\)', strval_to_val, matched[1])
+        try:
+            matched[2] = re.sub('VAL\((.+)\)', strval_to_val, matched[2])
+        except IndexError:
+            pass          
+        if el[0] == 'ASSIGNVALUE':
+            store_values.append(AssignValue(matched[0], matched[1]))
+        elif el[0] == 'ADDVALUE':
+            store_values.append(AddValue(matched[0], matched[1]))
+        elif el[0] == 'ASSIGNVALUEFROMCHOICE':
+            store_values.append(AssignValueFromChoice(matched[0], matched[1], matched[2]))
+        elif el[0] == 'ADDVALUEFROMCHOICE':
+            store_values.append(AddValueFromChoice(matched[0], matched[1], matched[2]))
+    return store_values
 
 
 
-'''________FUNCTIONS:_UPDATING_VARIABLES_PART_______________________________'''
+'''________FUNCTIONS:_VARIABLES_UPDATE_PART_________________________________'''
     
 def update_variables():
+    #for choice box only
     if current_state.get_current_box().store_value == []:
-        print('choice stored in pointed_choice')
+        print('no store value')
         current_state.set_choice(current_state.pointed_choice)
     else:
+        print('store value')
         for action in current_state.get_current_box().store_value:
             if isinstance(action, AssignValue):
                 try:
@@ -258,7 +329,6 @@ def update_variables():
 
 def update_state():
     global end
-                
     still_unread_boxes_in_current_cell = current_state.current_box_index < len(current_state.get_current_cell().boxes) - 1
     if still_unread_boxes_in_current_cell:
         current_state.increment_current_box_index()
@@ -268,6 +338,11 @@ def update_state():
             current_state.set_current_cell_index_and_reset_box_index(next_object.index)
         elif isinstance(next_object, NextCond):
             if eval(next_object.condition):
+                current_state.set_current_cell_index_and_reset_box_index(next_object.index1)
+            else:
+                current_state.set_current_cell_index_and_reset_box_index(next_object.index2)
+        elif isinstance(next_object, NextChoice):
+            if current_state.choice_of_current_cell == True: #choice 1
                 current_state.set_current_cell_index_and_reset_box_index(next_object.index1)
             else:
                 current_state.set_current_cell_index_and_reset_box_index(next_object.index2)
@@ -286,8 +361,8 @@ def display_box(box):
         for line, line_index in tuple(zip(box.list_of_textlines, list(range(1, len(box.list_of_textlines) + 1)))):
             win.blit(myfont.render(line.format(**VARIABLES_DICT), False, (0, 0, 0)), (left_margin, 10 + line_index*50))
     elif isinstance(box, ChoiceBox):
-        win.blit(myfont.render(box.choice1_text, False, (0, 0, 0)), (left_margin, 10))
-        win.blit(myfont.render(box.choice2_text, False, (0, 0, 0)), (left_margin, 60))
+        win.blit(myfont.render(box.choice1_text, False, (0, 0, 0)), (left_margin + 10, 10))
+        win.blit(myfont.render(box.choice2_text, False, (0, 0, 0)), (left_margin + 10, 60))
         if current_state.pointed_choice == True:
             win.blit(myfont.render(">", False, (0, 0, 0)), (left_margin - 10, 10))
         else:
@@ -311,11 +386,12 @@ VARIABLES_DICT = {'player': 'Hazel', 'money': 10, 'friend': None}
 #mettre le var_dict dans le dialog_dict ?
 
 left_margin = 20
+lines_per_box = 3
     
 clock = pyg.time.Clock()
 end = False
 
-DIALOG_DICT = file_to_dict("simple_proto.txt")
+DIALOG_DICT = file_to_dict("prototype.txt")
 current_state = CurrentState(DIALOG_DICT, VARIABLES_DICT)
                 
 while not(end):
