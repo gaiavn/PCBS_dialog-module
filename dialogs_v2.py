@@ -46,12 +46,6 @@ class Variable(Evaluate):
         if type(var_name) != str:
             raise TypeError("var_name must be of type string.")
         self.var_name = var_name
-
-
-class Input:
-    def __init__(self, str, var):
-        self.str = str
-        self.var = var
            
     
 class StoreValue:
