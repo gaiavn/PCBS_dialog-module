@@ -442,8 +442,8 @@ lines_per_box = 3
 clock = pyg.time.Clock()
 end = False
 
-DIALOG_DICT = file_to_dict("animal_questionnaire.txt")
-current_state = CurrentState(DIALOG_DICT, VAR_DICT_ANIMAL)
+DIALOG_DICT = file_to_dict("proto_v2.5.txt")
+current_state = CurrentState(DIALOG_DICT, VARIABLES_DICT)
                 
 while not(end):
     clock.tick(30)   

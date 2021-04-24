@@ -1,0 +1,44 @@
+VARIABLE DICT: {'player': 'Hazel', 'money': 10, 'friend': None} (unread)
+
+
+#1 - Choice test
+
+BOX()
+You currently have {money} in cash.
+
+CHOICE()
+Add me some
+I'm good with that
+
+NEXTCHOICE(2,3)
+
+
+#2
+ADDVALUE(money, 2)
+BOX()
+Okay, you now have {money}.
+NEXT(4)
+
+
+#3
+BOX()
+As you want. (You still have {money}.)
+NEXT(4)
+
+
+#4
+BOX()
+So, it means...
+NEXTCOND(ISGREATER(money, 10), 5, 6)
+
+
+#5
+BOX()
+You're rich!
+NEXTEND
+
+
+#6
+BOX()
+You're not so rich.
+NEXTEND
