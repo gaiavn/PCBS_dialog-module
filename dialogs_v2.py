@@ -8,8 +8,10 @@ Created on Wed Mar  3 10:19:01 2021
 
 # for a pygame font problem on my computer -
 # basically reset all variables at each execution
+# can be removed if it triggers issues
 from IPython import get_ipython
-get_ipython().magic('reset -sf')
+if get_ipython() is not None:
+    get_ipython().magic('reset -sf')
 
 
 
@@ -51,10 +53,7 @@ class CurrentState:
             self.current_element_index += 1
             
     def switch_pointer_position(self):
-        if self.pointer_position == 1:
-            self.pointer_position = 2
-        else:
-            self.pointer_position = 1
+        self.pointer_position = self.pointer_position % 2 + 1
         
     def set_choice_and_reset_pointer_position(self, position):
         self.choice_of_current_cell = position
@@ -357,26 +356,28 @@ def display_box(box):
         for line, line_index in tuple(zip(box.list_of_textlines, list(range(1,
                                             len(box.list_of_textlines) + 1)))):
             screen.blit(font.render(line.format(**current_state.variables_dict),
-                            False, (0, 0, 0)), (LEFT_MARGIN, 20 + line_index*30))
+                                            False, (0, 0, 0)), (LEFT_MARGIN,
+                        UP_MARGIN + (line_index - 1) * SPACE_BETWEEN_LINES))
     elif isinstance(box, ChoiceBox):
         screen.blit(font.render(box.choice1_text, False, (0, 0, 0)),
-                                                        (LEFT_MARGIN + 10, 50))
+                                    (LEFT_MARGIN + POINTER_SPACE, UP_MARGIN))
         screen.blit(font.render(box.choice2_text, False, (0, 0, 0)),
-                                                        (LEFT_MARGIN + 10, 80))
+                (LEFT_MARGIN + POINTER_SPACE, UP_MARGIN + SPACE_BETWEEN_LINES))
         if current_state.pointer_position == 1:
             screen.blit(font.render(">", False, (0, 0, 0)),
-                                                        (LEFT_MARGIN - 10, 50))
+                        (LEFT_MARGIN - POINTER_SPACE, UP_MARGIN))
         else:
             screen.blit(font.render(">", False, (0, 0, 0)),
-                                                        (LEFT_MARGIN - 10, 80))
+                 (LEFT_MARGIN - POINTER_SPACE, UP_MARGIN + SPACE_BETWEEN_LINES))
     elif not(isinstance(box, Instruction)):
         raise TypeError("the current 'element' is not an Element object")
 
 def redraw_window():
     pyg.draw.rect(screen, SCREEN_COLOR, pyg.Rect(0,0, SCREEN_WIDTH, SCREEN_HEIGHT))
-    pyg.draw.rect(screen, BANNER_COLOR, pyg.Rect(0,0, SCREEN_WIDTH, 25))
+    pyg.draw.rect(screen, BANNER_COLOR, pyg.Rect(0,0, SCREEN_WIDTH, BANNER_HEIGHT))
     display_box(current_state.get_current_element())   
     pyg.display.update()
+    
 
 
 if __name__ == '__main__':
@@ -386,28 +387,36 @@ if __name__ == '__main__':
     import pygame as pyg
     import re
     
+    pyg.mixer.pre_init(44100, -16, 1, 512)
     pyg.init()  
-    font = pyg.font.SysFont(pyg.font.get_default_font(), 24) 
-    SCREEN_WIDTH = 600
-    SCREEN_HEIGHT = 200    
-    LEFT_MARGIN = 20
-    RIGHT_MARGIN = 35
+    
+    zoom = 1.2 # multiply the window size by zoom factor
+    SCREEN_WIDTH = int(600 * zoom)
+    SCREEN_HEIGHT = int(200 * zoom)
+    LEFT_MARGIN = 20 * zoom
+    RIGHT_MARGIN = 35 * zoom
+    UP_MARGIN = 50 * zoom
+    SPACE_BETWEEN_LINES = 30 * zoom
+    POINTER_SPACE = 10 * zoom
     LINES_PER_BOX = 3
+    BANNER_HEIGHT = 25 * zoom
+
     screen = pyg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    font = pyg.font.SysFont(pyg.font.get_default_font(), int(24 * zoom)) 
     pyg.display.set_caption("Dialog Module")
     
     SCREEN_COLOR = pyg.Color(150, 150, 250)
     BANNER_COLOR = pyg.Color(150, 150, 150)
     BLACK = pyg.Color(0, 0, 0)
     
-    VARIABLES_DICT1 = {"name": None, "loops": 0}
-    VARIABLES_DICT2 = {'player': 'Hazel', 'money': 10, 'friend': None}
-    VAR_DICT_ESCAPE = {'key': 0}
+    beep_sound = pyg.mixer.Sound("sfx-bip.wav")
+    beep_sound.set_volume(0.5)
+    move_sound = pyg.mixer.Sound("sfx-blink.wav")
+    move_sound.set_volume(0.5)
     
-    DIALOG_DICT = file_to_dict("escape.txt")
-    VARIABLES_DICT = VAR_DICT_ESCAPE
+    DIALOG_DICT = file_to_dict("escape.md")
+    VARIABLES_DICT = {'key': 0}
     current_state = CurrentState(DIALOG_DICT, VARIABLES_DICT)
-    
     
     '''__________________MAIN_LOOP__________________________________________'''
      
@@ -424,14 +433,18 @@ if __name__ == '__main__':
                 update_variables()
                 update_current_state()
             elif event.type == pyg.KEYDOWN and isinstance(current_element, SimpleBox):
-                    if event.key == pyg.K_a:
-                        update_current_state()
+                if event.key == pyg.K_a:
+                    pyg.mixer.Sound.play(beep_sound)
+                    update_current_state()
             elif event.type == pyg.KEYDOWN and isinstance(current_element, ChoiceBox):
                 if event.key == pyg.K_DOWN and current_state.pointer_position == 1:
+                    pyg.mixer.Sound.play(move_sound)
                     current_state.switch_pointer_position()
                 elif event.key == pyg.K_UP and current_state.pointer_position == 2:
+                    pyg.mixer.Sound.play(move_sound)
                     current_state.switch_pointer_position()
                 elif event.key == pyg.K_a:
+                    pyg.mixer.Sound.play(beep_sound)
                     current_state.set_choice_and_reset_pointer_position(current_state.pointer_position)
                     update_current_state()                                      
         redraw_window()       
