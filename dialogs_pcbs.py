@@ -240,6 +240,7 @@ def lines_to_boxes(name, lines):
             if lines_left[0] == '': #means a new box is asked for
                 if counter == 0: # we have already an empty box
                     lines_left.remove(lines_left[0])
+                else:
                     counter = LINES_PER_BOX # allows new box
             else:
                 new_box.append(lines_left[0])
